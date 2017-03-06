@@ -47,46 +47,106 @@
 
 				var light, cube, torus;
 
-                var amb = new THREE.AmbientLight( 0x999999);
+                var amb = new THREE.AmbientLight( 0xffffff, 0.3);
                 scene.add(amb);
 
-				light = new THREE.PointLight( 0xffffff, 0.8);
-                light.position.set(-30, 40, 120);
-				scene.add( light );
+				// light = new THREE.PointLight( 0xffffff, 0.8);
+                // light.position.set(-30, 40, 120);
+				// scene.add( light );
+
+				// 光源（聚光灯）
+	            var spotLight = new THREE.SpotLight(0xffffff, 0.7);
+	            spotLight.position.set(-50, 80, 20);
+	            // 允许该光源投射阴影
+	            spotLight.castShadow = true;
+	            scene.add(spotLight);
+
+				var spotLightHelper = new THREE.SpotLightHelper( spotLight );
+				scene.add( spotLightHelper );
 
                 //显示辅助轴
                 var axes = new THREE.AxisHelper(2000);
                 scene.add(axes);
 
+				var map = new THREE.TextureLoader().load( './img/timg1.jpeg' );
+				map.wrapS = map.wrapT = THREE.RepeatWrapping;
+				map.repeat.width = map.repeat.height = 1.5;
+				map.anisotropy = 16;
+
 				var material = new THREE.MeshLambertMaterial({
-                    color: 0xCCCCCC,
-                    side: THREE.DoubleSide
-                });
+					map: map,
+					side: THREE.DoubleSide
+				});
 
+				var planeMap = new THREE.TextureLoader().load( './img/plane.jpg' );
+				planeMap.wrapS = planeMap.wrapT = THREE.RepeatWrapping;
+				planeMap.repeat.width = planeMap.repeat.height = 3;
+				planeMap.anisotropy = 16;
 
+				// 创建地面（平面）
+	            var planeGeometry = new THREE.PlaneGeometry(120, 120, 1, 1);
+				var planeMaterial = new THREE.MeshLambertMaterial( { map: planeMap, side: THREE.DoubleSide } );
+				var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+	            //平面接受阴影映射
+	            plane.receiveShadow = true;
+	            // x轴旋转90°
+	            plane.rotation.x = -0.5 * Math.PI;
+	            // 定位
+	            plane.position.x = 0;
+	            plane.position.y = 0;
+	            plane.position.z = 0;
+	            scene.add(plane);
 
-                cube = new THREE.Mesh(new THREE.BoxGeometry(23, 26, 45), material);
-                cube.position.set(11.5, 16.5, 22.5);
-                scene.add(cube);
+				var cubMaterials = [
+				    '1.jpeg',
+				    '2.jpeg',
+				    '3.jpeg',
+				    '4.jpeg',
+					'5.jpeg',
+					'5.jpeg'
+				];
+
+				var loader = new THREE.TextureLoader();
+				Promise.all(cubMaterials.map(function (val) {
+				    //加载图片, 新建材质, 传给下一个步骤.
+				    return new Promise(function (resolve, reject) {
+				        loader.load('./img/' + val, function (texture) {
+				            resolve(new THREE.MeshBasicMaterial({
+				                map: texture,
+				                // side: THREE.BackSide
+				            }));
+				        });
+				    });
+				})).then(function (materials) {
+				    //将材质贴到正方体的6个面.
+					cube = new THREE.Mesh(new THREE.BoxGeometry(23, 26, 45), new THREE.MultiMaterial(materials));
+	                cube.position.set(11.5, 16.5, 22.5);
+					cube.castShadow = true;
+	                scene.add(cube);
+				});
 
                 torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
                 torus.position.set(0, 4.5, 0);
                 torus.rotation.set(0, 0.5 * Math.PI, 0);
+				torus.castShadow = true;
                 scene.add(torus);
 
                 torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
                 torus.position.set(23, 4.5, 0);
                 torus.rotation.set(0, 0.5 * Math.PI, 0);
+				torus.castShadow = true;
                 scene.add(torus);
 
                 torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
                 torus.position.set(0, 4.5, 45);
                 torus.rotation.set(0, 0.5 * Math.PI, 0);
+				torus.castShadow = true;
                 scene.add(torus);
 
                 torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
                 torus.position.set(23, 4.5, 45);
                 torus.rotation.set(0, 0.5 * Math.PI, 0);
+				torus.castShadow = true;
                 scene.add(torus);
 
 
@@ -97,6 +157,8 @@
                 renderer.setClearColor(0x999999);
 				renderer.setPixelRatio(window.devicePixelRatio );
 				renderer.setSize(window.innerWidth, window.innerHeight);
+				// 允许阴影映射设置
+	            renderer.shadowMap.enabled = true;
 
 				container.appendChild( renderer.domElement );
 
