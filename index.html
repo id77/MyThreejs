@@ -17,12 +17,14 @@
 
 		<script src="build/three.js"></script>
 
-		<!-- <script src="js/libs/stats.min.js"></script> -->
-    	<script src="js/controls/OrbitControls.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+    	<!-- <script src="js/controls/OrbitControls.js"></script> -->
+		<script src="js/controls/TrackballControls.js"></script>
 
 		<script>
 
-			var container, camera, scene, renderer;
+			var controls, stats, container, camera, scene, renderer, plane;
+			var car, wheel, wheels = [];
 
 			init();
 			animate();
@@ -32,13 +34,28 @@
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
                 scene = new THREE.Scene();
 
-				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
-				camera.position.set(-30, 45 , 200);
-                camera.lookAt(scene.position);
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
+				camera.position.set(60, 12 , 30);
+                camera.lookAt(new THREE.Vector3(10, 0, 0));
                 var cameraHelper = new THREE.CameraHelper( camera );
                 scene.add( cameraHelper );
+
+				// 操控轨迹球
+				controls = new THREE.TrackballControls( camera );
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+				controls.noZoom = false;
+				controls.noPan = false;
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+				controls.keys = [ 65, 83, 68 ];
+				controls.addEventListener( 'change', render );
 
 
                 // var grid = new THREE.GridHelper( 1000, 1000, 0xffffff, 0x555555 );
@@ -86,16 +103,19 @@
 				// 创建地面（平面）
 	            var planeGeometry = new THREE.PlaneGeometry(120, 120, 1, 1);
 				var planeMaterial = new THREE.MeshLambertMaterial( { map: planeMap, side: THREE.DoubleSide } );
-				var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+				plane = new THREE.Mesh(planeGeometry, planeMaterial);
 	            //平面接受阴影映射
 	            plane.receiveShadow = true;
 	            // x轴旋转90°
 	            plane.rotation.x = -0.5 * Math.PI;
 	            // 定位
 	            plane.position.x = 0;
-	            plane.position.y = 0;
+	            plane.position.y = -17.5;
 	            plane.position.z = 0;
 	            scene.add(plane);
+
+				car = new THREE.Group();
+				wheel = new THREE.Group();
 
 				var cubMaterials = [
 				    '1.jpeg',
@@ -119,35 +139,37 @@
 				    });
 				})).then(function (materials) {
 				    //将材质贴到正方体的6个面.
-					cube = new THREE.Mesh(new THREE.BoxGeometry(23, 26, 45), new THREE.MultiMaterial(materials));
-	                cube.position.set(11.5, 16.5, 22.5);
+					cube = new THREE.Mesh(new THREE.BoxGeometry(45, 26, 23), new THREE.MultiMaterial(materials));
 					cube.castShadow = true;
-	                scene.add(cube);
+					car.add(cube);
+	                // scene.add(cube);
 				});
 
-                torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
-                torus.position.set(0, 4.5, 0);
-                torus.rotation.set(0, 0.5 * Math.PI, 0);
-				torus.castShadow = true;
-                scene.add(torus);
+				var torusGeometry = new THREE.TorusGeometry(3.5, 1, 10, 100);
 
-                torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
-                torus.position.set(23, 4.5, 0);
-                torus.rotation.set(0, 0.5 * Math.PI, 0);
-				torus.castShadow = true;
-                scene.add(torus);
+				for (i = 0; i < 4; i += 1) {
+					wheels.push(new THREE.Mesh(torusGeometry, material));
+					// wheels[i].rotation.set(0, 0.5 * Math.PI, 0);
+					switch (i) {
+						case 0:
+							wheels[i].position.set(22.5, -13, 11.5);
+							break;
+						case 1:
+							wheels[i].position.set(-22.5, -13, 11.5);
+							break;
+						case 2:
+							wheels[i].position.set(22.5, -13, -11.5);
+							break;
+						case 3:
+							wheels[i].position.set(-22.5, -13, -11.5);
+							break;
+					}
+					wheels[i].castShadow = true;
+					wheel.add(wheels[i]);
+				}
 
-                torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
-                torus.position.set(0, 4.5, 45);
-                torus.rotation.set(0, 0.5 * Math.PI, 0);
-				torus.castShadow = true;
-                scene.add(torus);
-
-                torus = new THREE.Mesh(new THREE.TorusGeometry(3.5, 1, 10, 100), material);
-                torus.position.set(23, 4.5, 45);
-                torus.rotation.set(0, 0.5 * Math.PI, 0);
-				torus.castShadow = true;
-                scene.add(torus);
+				car.add(wheel);
+				scene.add(car);
 
 
 
@@ -163,12 +185,67 @@
 				container.appendChild( renderer.domElement );
 
 
-                var controls = new THREE.OrbitControls( camera, renderer.domElement );
-				controls.addEventListener( 'change', render );
-				controls.target.set( 0, 1.2, 2 );
-				controls.update();
+                // var controls = new THREE.OrbitControls( camera, renderer.domElement );
+				// controls.addEventListener( 'change', render );
+				// controls.target.set( 0, 1.2, 2 );
+				// controls.update();
+
+
+				function doughnut(state){
+					for (i = 0; i < wheels.length; i += 1) {
+						if (state) {
+							wheels[i].rotation.z += 0.15;
+						} else {
+							wheels[i].rotation.z -= 0.15;
+						}
+
+					}
+				}
+
+				function direction(state, direction){
+					for (i = 0; i < wheels.length; i += 1) {
+						if (state) {
+							if(direction == 65){
+								if(i == 1 || i == 3){
+									wheels[i].rotation.y = -0.35;
+								}
+							}
+							if(direction == 68){
+								if(i == 1 || i == 3){
+									wheels[i].rotation.y = 0.35;
+								}
+							}
+						} else {
+							wheels[i].rotation.y = 0;
+						}
+
+					}
+				}
 
 				window.addEventListener( 'resize', onWindowResize, false );
+
+				window.addEventListener( 'keydown', function ( event ) {
+					switch ( event.keyCode ) {
+						case 87: // w
+							doughnut(true);
+							direction(false);
+							car.position.x -= 0.1;
+							break;
+						case 83: // s
+							doughnut(false);
+							direction(false);
+							car.position.x += 0.1;
+							break;
+						case 65: // a
+							direction(true, 65);
+							car.rotation.y += 0.1;
+							break;
+						case 68: // d
+							direction(true, 68);
+							car.rotation.y -= 0.1;
+							break;
+					}
+				});
 
 			}
 
@@ -178,15 +255,16 @@
 				camera.updateProjectionMatrix();
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				controls.handleResize();
 
 			}
 
-			//
+
 
 			function animate() {
 
 				requestAnimationFrame( animate );
-
+				controls.update();
 				render();
 
 			}
@@ -195,8 +273,17 @@
 
 
 				renderer.render( scene, camera );
+				stats.update();
 
 			}
+
+
+			function onKeyDown(){
+
+			}
+
+
+
 
 		</script>
 
