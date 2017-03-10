@@ -136,7 +136,7 @@
              MTLLoader.setPath('./obj/');
 
              // 平面
-             var texturePlane = textureLoader.load('../img/plane.jpg', function(texture) {
+             var texturePlane = textureLoader.load('./img/plane.jpg', function(texture) {
                  texturePlane.wrapS = texturePlane.wrapT = THREE.RepeatWrapping;    // 指定重复方式
                  texturePlane.repeat.set(6, 6);    // 重复次数
                  var plane = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), new THREE.MeshPhongMaterial({
