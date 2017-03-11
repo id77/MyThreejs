@@ -244,7 +244,6 @@
 
              MTLLoader.load('port.mtl', function(materials) {    // 加载材质
                  materials.preload();
-                 // 加载资源
                  OBJLoader.setMaterials(materials);
                  OBJLoader.load('port.obj', function(obj){
                     var obj1 = obj.clone();
@@ -270,7 +269,6 @@
 
                     var obj3 = obj.clone();
 
-                    // 材质预载
                     obj3.traverse(function(child){
                         if(child instanceof THREE.Mesh){
                             child.material = teapotMaterial2;
