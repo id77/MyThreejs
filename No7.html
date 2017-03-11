@@ -22,37 +22,93 @@
     <script src="js/libs/dat.gui.min.js" charset="utf-8"></script>
     <script src="js/controls/TrackballControls.js" charset="utf-8"></script>
 
+    <!-- 顶点着色器 -->
     <script id="myVertexShader" type="x-shader/x-vertex">
-         varying vec3 lightdir;
-         varying vec3 eyenorm;
-         uniform vec3 lightpos;
-         void main() {
-             gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0);
+        // uniform：每个顶点/片元对应相同的值
+        // varying：从顶点着色器传递到片元着色器中的变量名字
+        uniform vec3 color;    // 颜色
+        uniform vec3 light;    // 灯、光源位置
 
-             vec4 tmp = modelViewMatrix * vec4 (lightpos, 1.0);
-             lightdir = tmp.xyz;
+        varying vec3 vColor;
+        varying vec3 vNormal;
+        varying vec3 vLight;
 
-             eyenorm = normalMatrix * normal;
-         }
+        void main()
+        {
+
+            // pass to fs
+            vColor = color;    // 设置物体基础的颜色, 非片元颜色
+            vNormal = normalize(normalMatrix * normal);    // http://blog.csdn.net/racehorse/article/details/6664775 待阅
+
+            /**
+             * [viewMatrix 视图矩阵]
+             * [modelViewMatrix 模型矩阵]
+             * [projectionMatrix 投影矩阵]
+             * [vec4(light, 1.0) 将物体坐标系下的法向量方向，转变成视图坐标系下的法向量方向 ] http://zhangwenli.com/blog/2017/03/05/cartoon-shading-1/
+             */
+            vec4 viewLight = viewMatrix * vec4(light, 1.0);
+            vLight = viewLight.xyz;    // 光源相对于摄像机的坐标
+
+            /**
+             * [gl_Position description]
+             * [position 顶点在物体坐标系]
+             */
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);    // 计算三维模型在二维显示屏上的坐标
+        }
+    </script>
+
+    <!-- 片元着色器 -->
+    <script id="myFragmentShaderSilhouette" type="x-shader/x-fragment">
+        varying vec3 vColor;
+        varying vec3 vNormal;
+
+        void main() {
+            float silhouette = length(vNormal * vec3(1.0, 1.0, 0.0));    // 描边、轮廓
+            if (silhouette < 0.88) {    // 小于 0.88 作为轮廓部分上色
+                silhouette = 1.0;
+            }
+            else {
+                silhouette = 0.0;
+            }
+
+            gl_FragColor = vec4(vColor * silhouette, 1.0);    // 设置片元的颜色
+        }
     </script>
 
     <script id="myFragmentShader" type="x-shader/x-fragment">
-         varying vec3 lightdir;
-         varying vec3 eyenorm;
+        varying vec3 vColor;
+        varying vec3 vNormal;
+        varying vec3 vLight;
 
-         void main() {
-            //vec3 lightdir = vec3 (1,1,2);
-            float ndotl = dot (normalize (eyenorm), normalize (lightdir));
-            if (ndotl > 0.8) {
-                ndotl = 1.0;
-            } else if (ndotl > 0.6) {
-                ndotl = 0.6;
-            } else {
-                ndotl = 0.2;
+        void main() {
+            float silhouette = length(vNormal * vec3(1.0, 1.0, 0.0));
+            if (silhouette < 0.88) {    // 小于 0.88 作为轮廓部分上色
+                silhouette = 1.0;
             }
-            gl_FragColor = vec4 (ndotl, ndotl, ndotl, 1.0);
-         }
+            else {
+                silhouette = 0.0;
+            }
+
+            float diffuse = dot(normalize(vLight), vNormal);    // 根据亮度值，分别阶梯式地映射到新的亮度值 [0-1]
+            if (diffuse > 0.8) {
+                diffuse = 1.0;
+            }
+            else if (diffuse > 0.5) {
+                diffuse = 0.6;
+            }
+            else if (diffuse > 0.2) {
+                diffuse = 0.4;
+            }
+            else {
+                diffuse = 0.2;
+            }
+            diffuse = diffuse * silhouette;
+
+            gl_FragColor = vec4(vColor * diffuse, 1.0);    // 设置片元的颜色
+        }
     </script>
+
+
 
     <script type="text/javascript">
         var controls, stats, scene, camera, renderer, plane, textureLoader, OBJLoader, MTLLoader, Gui;
@@ -104,27 +160,27 @@
 
             var SpotLight, ambientLight;
             // 聚光灯
-            SpotLight = new THREE.SpotLight(0xcccccc, 1, 100, Math.PI / 6, 25);
-            SpotLight.position.set(0, 25, -5);
-            // SpotLight.target = ss;    // 将灯光目标定为茶壶
+            SpotLight = new THREE.SpotLight(0xffffff, 1, 5555, Math.PI / 6, 25);
+            SpotLight.position.set(555, 555, 55);
+            SpotLight.target.position.set(100, 0, 0);   // 将灯光目标定为100, 0 ,0;可设定为物体
             SpotLight.castShadow = true;    // 开启聚光灯产生阴影
             SpotLight.shadow.mapSize.width = 2048;    // 提高阴影分辨率
             SpotLight.shadow.mapSize.height = 2048;
-            // scene.add(SpotLight);
+            scene.add(SpotLight);
             // 环境光
             ambientLight = new THREE.AmbientLight(0x0101010);
             scene.add(ambientLight);
 
-            // 光模型
-            lightmodel = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 16), new THREE.MeshBasicMaterial({
-                color: 0xffff00
-            }));
-            scene.add(lightmodel);
-            // 点光源
-            pointLight = new THREE.PointLight(0xffffff);
-            // pointLight.position.set(0, 300, 200);
-            pointLight.castShadow = true;
-            scene.add(pointLight);
+            // // 光模型
+            // lightmodel = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 16), new THREE.MeshBasicMaterial({
+            //     color: 0xffff00
+            // }));
+            // scene.add(lightmodel);
+            // // 点光源
+            // pointLight = new THREE.PointLight(0xffffff);
+            // // pointLight.position.set(0, 300, 200);
+            // pointLight.castShadow = true;
+            // scene.add(pointLight);
 
              // 实例化加载器
              textureLoader = new THREE.TextureLoader();
@@ -150,22 +206,46 @@
              });
 
              // 顶点着色器
-             teapotMaterial = new THREE.ShaderMaterial({
-                 uniforms: {
-                     color: {
-                         type: 'v3',
-                         value: new THREE.Color('#2f611a')
-                     },
-                     light: {
-                         type: 'v3',
-                         value: pointLight.position
-                     }
-                 },
+             teapotMaterial1 = new THREE.ShaderMaterial({
                  vertexShader: document.getElementById('myVertexShader').textContent,
-                 fragmentShader: document.getElementById('myFragmentShader').textContent
+                 fragmentShader: document.getElementById('myFragmentShaderSilhouette').textContent,
+                uniforms: {
+                    color: {    // 基础色
+                        type: 'v3',    // 指定变量类型为三维向量
+                        value: new THREE.Color('#2f611a')
+                    },
+                    light: {    // 光源位置
+                        type: 'v3',
+                        value: SpotLight.position
+                    }
+                },
+                side: THREE.DoubleSide,
+
+
+             });
+             // 顶点着色器
+             teapotMaterial2 = new THREE.ShaderMaterial({
+                 vertexShader: document.getElementById('myVertexShader').textContent,
+                 fragmentShader: document.getElementById('myFragmentShader').textContent,
+                uniforms: {
+                    color: {
+                        type: 'v3',
+                        value: new THREE.Color('#2f611a')
+                    },
+                    light: {
+                        type: 'v3',
+                        value: SpotLight.position
+                    }
+                },
+                side: THREE.DoubleSide,
+
+
              });
 
+             MTLLoader.load('port.mtl', function(materials) {    // 加载材质
+                 materials.preload();
              // 加载资源
+             OBJLoader.setMaterials(materials);
              OBJLoader.load('port.obj', function(obj){
                 var obj1 = obj.clone();
                 obj1.traverse(function(child){
@@ -183,22 +263,22 @@
                 var obj2 = obj.clone();
                 obj2.traverse(function(child){
                     if(child instanceof THREE.Mesh){
-                        child.material = new THREE.MeshPhongMaterial({
-                            color: 0x68cb45,
-                            side: THREE.DoubleSide,
-                        });
+                        child.material = teapotMaterial1;
                     }
                 });
-                new THREE.Mesh(obj2, teapotMaterial);
                 scene.add(obj2);
 
                 var obj3 = obj.clone();
 
-                MTLLoader.load('port.mtl', function(materials) {    // 加载材质
-                    materials.preload();    // 材质预载
-                    new THREE.Mesh(obj3, new THREE.MultiMaterial(materials, teapotMaterial));
-                    obj3.position.x = 16;
-                    scene.add(obj3);
+                // 材质预载
+                obj3.traverse(function(child){
+                    if(child instanceof THREE.Mesh){
+                        child.material = teapotMaterial2;
+                    }
+                });
+
+                obj3.position.x = 16;
+                scene.add(obj3);
                 });
              });
 
@@ -207,8 +287,7 @@
 
             function animate(){
 
-                pointLight.position.set (50*Math.cos(angle), 75, 50*Math.sin(angle));
-                lightmodel.position.copy (pointLight.position);
+                SpotLight.position.set (50*Math.cos(angle), 75, 50*Math.sin(angle));
 
                 controls.update();    // 更新轨迹球控制
                 stats.update();    // 更新FPS监测
@@ -228,8 +307,8 @@
             var axes = new THREE.AxisHelper(1000);
             scene.add(axes);
 
-            // var helper = new THREE.CameraHelper(SpotLight.shadow.camera);
-            // scene.add(helper);
+            var helper = new THREE.CameraHelper(SpotLight.shadow.camera);
+            scene.add(helper);
 
             /** helper end **/
 
