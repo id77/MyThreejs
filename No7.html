@@ -64,7 +64,7 @@
 
         void main() {
             float silhouette = length(vNormal * vec3(1.0, 1.0, 0.0));    // 描边、轮廓
-            if (silhouette < 0.88) {    // 小于 0.88 作为轮廓部分上色
+            if (silhouette < 0.9) {    // 小于 0.88 作为轮廓部分上色
                 silhouette = 1.0;
             }
             else {
@@ -244,41 +244,41 @@
 
              MTLLoader.load('port.mtl', function(materials) {    // 加载材质
                  materials.preload();
-             // 加载资源
-             OBJLoader.setMaterials(materials);
-             OBJLoader.load('port.obj', function(obj){
-                var obj1 = obj.clone();
-                obj1.traverse(function(child){
-                    if(child instanceof THREE.Mesh){
-                        child.material = new THREE.MeshBasicMaterial({
-                            color: 0x222222,
-                            side: THREE.DoubleSide,
-                            wireframe: true
-                        });
-                    }
-                });
-                obj1.position.x = -16;
-                scene.add(obj1);
+                 // 加载资源
+                 OBJLoader.setMaterials(materials);
+                 OBJLoader.load('port.obj', function(obj){
+                    var obj1 = obj.clone();
+                    obj1.traverse(function(child){
+                        if(child instanceof THREE.Mesh){
+                            child.material = new THREE.MeshBasicMaterial({
+                                color: 0x222222,
+                                side: THREE.DoubleSide,
+                                wireframe: true
+                            });
+                        }
+                    });
+                    obj1.position.x = -16;
+                    scene.add(obj1);
 
-                var obj2 = obj.clone();
-                obj2.traverse(function(child){
-                    if(child instanceof THREE.Mesh){
-                        child.material = teapotMaterial1;
-                    }
-                });
-                scene.add(obj2);
+                    var obj2 = obj.clone();
+                    obj2.traverse(function(child){
+                        if(child instanceof THREE.Mesh){
+                            child.material = teapotMaterial1;
+                        }
+                    });
+                    scene.add(obj2);
 
-                var obj3 = obj.clone();
+                    var obj3 = obj.clone();
 
-                // 材质预载
-                obj3.traverse(function(child){
-                    if(child instanceof THREE.Mesh){
-                        child.material = teapotMaterial2;
-                    }
-                });
+                    // 材质预载
+                    obj3.traverse(function(child){
+                        if(child instanceof THREE.Mesh){
+                            child.material = teapotMaterial2;
+                        }
+                    });
 
-                obj3.position.x = 16;
-                scene.add(obj3);
+                    obj3.position.x = 16;
+                    scene.add(obj3);
                 });
              });
 
