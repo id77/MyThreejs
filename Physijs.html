@@ -444,8 +444,8 @@
                 stats.update();    // 更新FPS监测
 
                 if ( vehicle ) {
-        			// camera.position.copy( vehicle.mesh.position ).add( new THREE.Vector3( 30, 22, 35 ) );
-        			// camera.lookAt( vehicle.mesh.position );
+        			camera.position.copy( vehicle.mesh.position ).add( new THREE.Vector3( 30, 22, 35 ) );
+        			camera.lookAt( vehicle.mesh.position );
 
         			SpotLight.target.position.copy( vehicle.mesh.position );
         			SpotLight.position.addVectors( SpotLight.target.position, new THREE.Vector3( 20, 20, -15 ) );
